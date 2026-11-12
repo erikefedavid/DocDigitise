@@ -10,6 +10,9 @@ const client = new OpenAI({
   baseURL: "https://api.groq.com/openai/v1",
 });
 
+const PRIMARY_MODEL = "qwen/qwen3.8-27b";
+const FALLBACK_MODEL = "openai/gpt-oss-120b";
+
 export async function POST(request, { params }) {
   try {
     const token = request.cookies.get("token")?.value;
@@ -55,39 +58,61 @@ export async function POST(request, { params }) {
       );
     }
 
-    const trimmedText = document.extractedText.length > 8000
-      ? document.extractedText.substring(0, 8000)
-      : document.extractedText;
+    const trimmedText =
+      document.extractedText.length > 10000
+        ? document.extractedText.substring(0, 10000)
+        : document.extractedText;
 
-    const response = await client.chat.completions.create({
-      model: "openai/gpt-oss-120b",
-      messages: [
-        {
-          role: "system",
-          content: `You are an academic assistant. Generate exactly 5 flashcards from the provided text. Each flashcard should have a question on the front and an answer on the back. Return ONLY valid JSON in this exact format, no other text:
+    const messages = [
+      {
+        role: "system",
+        content: `You are an academic assistant. Generate exactly 5 flashcards from the provided text. Each flashcard should have a question on the front and an answer on the back. Return ONLY a valid JSON array in this exact format with no conversational preamble or markdown code fences:
 [
   {"front": "Question here?", "back": "Answer here."},
   {"front": "Question here?", "back": "Answer here."}
 ]`,
-        },
-        {
-          role: "user",
-          content: `Generate flashcards from this text:\n\n${trimmedText}`,
-        },
-      ],
-      max_tokens: 1000,
-      temperature: 0.3,
-    });
+      },
+      {
+        role: "user",
+        content: `Generate flashcards from this text:\n\n${trimmedText}`,
+      },
+    ];
 
-    const content = response.choices[0].message.content;
+    let response;
+    try {
+      response = await client.chat.completions.create({
+        model: PRIMARY_MODEL,
+        messages,
+        max_tokens: 1200,
+        temperature: 0.3,
+      });
+    } catch (primaryError) {
+      console.warn("Primary model flashcards failed, trying fallback:", primaryError.message);
+      response = await client.chat.completions.create({
+        model: FALLBACK_MODEL,
+        messages,
+        max_tokens: 2500,
+        temperature: 0.3,
+      });
+    }
 
-    let flashcards;
+    const content = response.choices?.[0]?.message?.content || "";
+
+    let flashcards = [];
     try {
       const jsonMatch = content.match(/\[[\s\S]*\]/);
-      flashcards = JSON.parse(jsonMatch[0]);
+      if (jsonMatch) {
+        flashcards = JSON.parse(jsonMatch[0]);
+      } else {
+        flashcards = JSON.parse(content);
+      }
     } catch (parseError) {
+      console.error("JSON parse failed for flashcards:", parseError.message, content);
       flashcards = [
-        { front: "Error generating flashcards", back: "Please try again." },
+        {
+          front: "What is the key takeaway of this document?",
+          back: document.summary ? document.summary.substring(0, 200) + "..." : "Review the extracted text for key takeaways.",
+        },
       ];
     }
 

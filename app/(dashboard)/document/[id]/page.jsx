@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -77,15 +77,7 @@ export default function DocumentViewPage() {
     }
   }, [document]);
 
-  useEffect(() => {
-    fetchDocument();
-  }, []);
-
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chatMessages]);
-
-  const fetchDocument = async () => {
+  const fetchDocument = useCallback(async () => {
     try {
       const response = await fetch(`/api/documents/${params.id}`);
       const data = await response.json();
@@ -101,7 +93,15 @@ export default function DocumentViewPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [params.id]);
+
+  useEffect(() => {
+    fetchDocument();
+  }, [fetchDocument]);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages]);
 
   const handleCopy = async (text, type) => {
     await navigator.clipboard.writeText(text);
@@ -255,7 +255,11 @@ export default function DocumentViewPage() {
       if (data.success) {
         setChatMessages((prev) => [
           ...prev,
-          { role: "assistant", content: data.data.answer },
+          {
+            role: "assistant",
+            content: data.data.answer,
+            sources: data.data.sources || [],
+          },
         ]);
       } else {
         setChatMessages((prev) => [
@@ -386,10 +390,23 @@ export default function DocumentViewPage() {
                     className="max-w-full max-h-[70vh] object-contain mx-auto rounded"
                   />
                 ) : document.fileType === "application/pdf" ? (
-                  <iframe
-                    src={document.imageUrl}
-                    className="w-full h-[70vh] rounded"
-                  />
+                  <div className="space-y-3">
+                    <iframe
+                      src={document.imageUrl}
+                      className="w-full h-[65vh] rounded border"
+                      title={document.originalName}
+                    />
+                    <div className="flex justify-center">
+                      <a
+                        href={document.imageUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-primary underline hover:text-primary/80"
+                      >
+                        Open original PDF in new tab
+                      </a>
+                    </div>
+                  </div>
                 ) : (
                   <div className="flex items-center justify-center h-[300px] bg-muted rounded">
                     <p className="text-muted-foreground text-center px-4">
@@ -533,8 +550,23 @@ export default function DocumentViewPage() {
             <CardContent className="min-w-0">
               <div className="h-64 sm:h-80 lg:h-96 overflow-y-auto rounded-md bg-muted/50 p-4">
                 {isResummarizing ? (
-                  <div className="flex items-center justify-center h-full">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  <div className="flex flex-col items-center justify-center h-full gap-2 text-muted-foreground">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                    <p className="text-xs">Generating AI summary...</p>
+                  </div>
+                ) : !document.summary || document.summary.includes("Summary generation failed") ? (
+                  <div className="flex flex-col items-center justify-center h-full text-center p-4">
+                    <p className="text-sm text-muted-foreground mb-3">
+                      {document.summary || "No summary generated for this document yet."}
+                    </p>
+                    <Button
+                      size="sm"
+                      onClick={() => handleResummarize(selectedType)}
+                      disabled={isResummarizing}
+                    >
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Generate Summary Now
+                    </Button>
                   </div>
                 ) : (
                   <div className="overflow-hidden break-words">
@@ -596,7 +628,25 @@ export default function DocumentViewPage() {
                       }`}
                     >
                       {msg.role === "assistant" ? (
-                        <MarkdownRenderer content={msg.content} />
+                        <>
+                          <MarkdownRenderer content={msg.content} />
+                          {msg.sources && msg.sources.length > 0 && (
+                            <div className="mt-2.5 pt-2 border-t border-border/40 flex items-center gap-1.5 flex-wrap">
+                              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                                Grounded Sources:
+                              </span>
+                              {msg.sources.map((s, sIdx) => (
+                                <span
+                                  key={sIdx}
+                                  title={s.snippet}
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-primary/10 text-primary border border-primary/20"
+                                >
+                                  Pg {s.pageNumber} · Sec {s.chunkIndex + 1} ({Math.round(s.similarity * 100)}% match)
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </>
                       ) : (
                         msg.content
                       )}

@@ -1,7 +1,7 @@
 import connectDB from "@/lib/db";
 import Document from "@/models/Document";
 import { verifyToken } from "@/lib/auth";
-import { chatWithDocument } from "@/lib/ai";
+import { askGroundedDocument } from "@/lib/rag";
 import { NextResponse } from "next/server";
 import { checkRateLimit } from "@/lib/rate-limit";
 
@@ -61,11 +61,18 @@ export async function POST(request, { params }) {
       );
     }
 
-    const answer = await chatWithDocument(document.extractedText, question);
+    const result = await askGroundedDocument(
+      document._id,
+      document.extractedText,
+      question
+    );
 
     return NextResponse.json({
       success: true,
-      data: { answer },
+      data: {
+        answer: result.answer,
+        sources: result.sources,
+      },
     });
   } catch (error) {
     console.error("Chat error:", error);

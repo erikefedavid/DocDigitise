@@ -118,8 +118,7 @@ export async function POST(request) {
 
     const originalNameWithoutExt = file.name.replace(/\.[^/.]+$/, "");
     const cleanName = originalNameWithoutExt.replace(/[^a-zA-Z0-9]/g, "_");
-    const extension = file.name.split(".").pop();
-    const fileName = `${Date.now()}_${cleanName}.${extension}`;
+    const fileName = `${Date.now()}_${cleanName}`;
 
     // ──────────────────────────────────────────────
     // 6. Process Document FIRST (extract text)
@@ -225,6 +224,38 @@ export async function POST(request) {
         },
         { status: 500 }
       );
+    }
+
+    // ──────────────────────────────────────────────
+    // 10b. Asynchronous RAG Vector Indexing
+    // ──────────────────────────────────────────────
+    if (ocrResult.text && ocrResult.text.trim().length > 0) {
+      (async () => {
+        try {
+          const { chunkTextWithOverlap } = await import("@/lib/chunker");
+          const { getEmbedding } = await import("@/lib/embedder");
+          const Chunk = (await import("@/models/Chunk")).default;
+
+          const chunks = chunkTextWithOverlap(ocrResult.text);
+          if (chunks.length > 0) {
+            const chunkDocs = [];
+            for (const c of chunks) {
+              const vector = await getEmbedding(c.text);
+              chunkDocs.push({
+                documentId: document._id,
+                userId: decoded.userId,
+                pageNumber: 1,
+                chunkIndex: c.chunkIndex,
+                text: c.text,
+                embedding: vector,
+              });
+            }
+            await Chunk.insertMany(chunkDocs);
+          }
+        } catch (ragErr) {
+          console.warn("Background RAG vector indexing error:", ragErr.message);
+        }
+      })();
     }
 
     // ──────────────────────────────────────────────

@@ -1,32 +1,42 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useSyncExternalStore } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { WifiOff, AlertTriangle } from "lucide-react";
 
+function subscribeOnline(callback) {
+  window.addEventListener("online", callback);
+  window.addEventListener("offline", callback);
+  return () => {
+    window.removeEventListener("online", callback);
+    window.removeEventListener("offline", callback);
+  };
+}
+
+function getOnlineSnapshot() {
+  return navigator.onLine;
+}
+
+function getOnlineServerSnapshot() {
+  return true;
+}
+
 export function ConnectionStatus() {
-  const [isOnline, setIsOnline] = useState(true);
+  const isOnline = useSyncExternalStore(
+    subscribeOnline,
+    getOnlineSnapshot,
+    getOnlineServerSnapshot
+  );
   const [isSlow, setIsSlow] = useState(false);
 
   useEffect(() => {
-    setIsOnline(navigator.onLine);
-
-    const handleOnline = () => {
-      setIsOnline(true);
-      setIsSlow(false);
-    };
-
-    const handleOffline = () => {
-      setIsOnline(false);
-    };
-
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
-
     const checkSpeed = () => {
-      if (navigator.connection) {
+      if (typeof navigator !== "undefined" && navigator.connection) {
         const connection = navigator.connection;
-        if (connection.effectiveType === "2g" || connection.effectiveType === "slow-2g") {
+        if (
+          connection.effectiveType === "2g" ||
+          connection.effectiveType === "slow-2g"
+        ) {
           setIsSlow(true);
         } else {
           setIsSlow(false);
@@ -36,17 +46,12 @@ export function ConnectionStatus() {
 
     checkSpeed();
 
-    if (navigator.connection) {
+    if (typeof navigator !== "undefined" && navigator.connection) {
       navigator.connection.addEventListener("change", checkSpeed);
-    }
-
-    return () => {
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
-      if (navigator.connection) {
+      return () => {
         navigator.connection.removeEventListener("change", checkSpeed);
-      }
-    };
+      };
+    }
   }, []);
 
   return (
