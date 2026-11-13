@@ -14,6 +14,7 @@ import {
   Shield,
   Globe,
 } from "lucide-react";
+import { ClearanceRoiCalculator } from "@/components/landing/roi-calculator";
 
 const fadeIn = {
   hidden: { opacity: 0, y: 20 },
@@ -279,6 +280,8 @@ export default function LandingPage() {
           ))}
         </motion.div>
       </section>
+
+      <ClearanceRoiCalculator />
 
       <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <motion.div
