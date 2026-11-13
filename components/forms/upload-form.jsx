@@ -12,6 +12,7 @@ import {
   AlertCircle,
   Loader2,
   FolderOpen,
+  Sparkles,
 } from "lucide-react";
 import { MAX_FILE_SIZE, ALLOWED_FILE_TYPES } from "@/lib/constants";
 import { toast } from "sonner";
@@ -85,6 +86,24 @@ export function UploadForm() {
     setFile(null);
     setError("");
     if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const loadSampleDocument = async () => {
+    try {
+      setIsProcessing(true);
+      setError("");
+      const res = await fetch("/samples/sample-clearance-certificate.png");
+      if (!res.ok) throw new Error("Could not load sample document");
+      const blob = await res.blob();
+      const sampleFile = new File([blob], "MUT-Graduation-Clearance-Sample.png", { type: "image/png" });
+      setFile(sampleFile);
+      toast.success("Sample clearance document loaded!");
+    } catch (err) {
+      toast.error("Failed to load sample document");
+      setError("Failed to load sample document");
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const formatFileSize = (bytes) => {
@@ -227,6 +246,22 @@ export function UploadForm() {
               <p className="text-xs text-muted-foreground">
                 JPG, PNG, PDF, DOCX — Max 10MB
               </p>
+              <div className="mt-4 pt-4 border-t border-dashed w-full max-w-xs flex justify-center">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="text-xs font-medium gap-1.5 hover:bg-primary/10 hover:text-primary transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    loadSampleDocument();
+                  }}
+                  disabled={isProcessing}
+                >
+                  <Sparkles className="h-3.5 w-3.5 text-primary" />
+                  Load Sample Clearance Document
+                </Button>
+              </div>
             </CardContent>
           </Card>
 
