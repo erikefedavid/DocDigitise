@@ -5,6 +5,8 @@ import { askGroundedDocument } from "@/lib/rag";
 import { NextResponse } from "next/server";
 import { checkRateLimit } from "@/lib/rate-limit";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(request, { params }) {
   try {
     const token = request.cookies.get("token")?.value;

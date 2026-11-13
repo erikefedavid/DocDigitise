@@ -49,6 +49,10 @@ const documentSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    auditReport: {
+      type: Object,
+      default: null,
+    },
   },
   {
     timestamps: true,

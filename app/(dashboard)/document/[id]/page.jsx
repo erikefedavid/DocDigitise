@@ -8,6 +8,7 @@ import { MarkdownRenderer } from "@/components/shared/markdown-renderer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { FlashcardViewer } from "@/components/documents/flashcard-viewer";
+import { ClearanceAuditCard } from "@/components/documents/clearance-audit-card";
 import { fetchWithTimeout } from "@/lib/fetch-wrapper";
 import { SafeImage } from "@/components/shared/safe-image";
 import {
@@ -464,6 +465,12 @@ export default function DocumentViewPage() {
           </AlertDialog>
 
         </div>
+
+        {/* Autonomous Institutional Clearance Audit Card */}
+        <ClearanceAuditCard
+          documentId={document._id}
+          initialAudit={document.auditReport}
+        />
 
         {/* Text + Summary Grid */}
         <div className="grid gap-4 lg:grid-cols-2 min-w-0">

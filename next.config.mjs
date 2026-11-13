@@ -1,6 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  serverExternalPackages: ["tesseract.js", "sharp", "unpdf", "mammoth"],
+  serverExternalPackages: [
+    "tesseract.js",
+    "sharp",
+    "unpdf",
+    "mammoth",
+    "@xenova/transformers",
+    "onnxruntime-node",
+  ],
   images: {
     remotePatterns: [
       {

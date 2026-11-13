@@ -1,5 +1,7 @@
 import connectDB from "@/lib/db";
 import Document from "@/models/Document";
+
+export const dynamic = "force-dynamic";
 import { verifyToken } from "@/lib/auth";
 import { uploadToCloudinary, deleteFromCloudinary } from "@/lib/cloudinary";
 import { preprocessImage } from "@/lib/image-processor";
