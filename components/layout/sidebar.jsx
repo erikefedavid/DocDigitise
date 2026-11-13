@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import { useAuth } from "@/context/auth-context";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { LayoutDashboard, Upload, FileText, LogOut } from "lucide-react";
+import { LayoutDashboard, Upload, FileText, Activity, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -24,6 +24,11 @@ const navItems = [
     title: "Documents",
     href: "/documents",
     icon: FileText,
+  },
+  {
+    title: "Empirical Benchmarks",
+    href: "/benchmark",
+    icon: Activity,
   },
 ];
 
